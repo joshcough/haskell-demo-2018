@@ -66,15 +66,10 @@ library
       , amazonka
       , amazonka-s3
       , bcrypt
-      , binary
-      , blaze-html
-      , blaze-markup
       , bytestring
       , conduit
       , containers
       , directory
-      , ekg
-      , ekg-core
       , esqueleto
       , exceptions
       , fast-logger
@@ -83,12 +78,8 @@ library
       , http-api-data
       , jose
       , lens
-      , lens-aeson
-      , microlens
-      , MissingH
       , monad-control
       , monad-logger
-      , monad-metrics
       , mtl
       , nano-http >=0.1.1
       , persistent
@@ -104,12 +95,9 @@ library
       , servant >= 0.13 && < 0.14
       , servant-auth >=0.3.1.0
       , servant-auth-server
-      , servant-blaze
       , servant-generic
-      , servant-js >= 0.9 && < 0.10
       , servant-multipart
       , servant-server >= 0.13 && < 0.14
-      , servant-websockets
       , template-haskell
       , text
       , time
@@ -117,13 +105,8 @@ library
       , transformers-base
       , unliftio-core
       , unordered-containers
-      , uuid
       , wai
-      , wai-extra
-      , wai-middleware-metrics
       , warp
-      , websockets
-      , zip
     ghc-options:
         -fwarn-unused-imports -Wall -fwarn-unused-binds -fwarn-unused-imports
         -- -ddump-splices
@@ -136,16 +119,9 @@ test-suite file-server-demo-test
     main-is:
         Spec.hs
     other-modules:
-        Auth.TeamDbSpec
-        Auth.TeamServerWaiSpec
         Auth.UserDbSpec
         Auth.UserServerWaiSpec
         Helpers
-        Overlays.AdminServerWaiSpec
-        Overlays.SceneDbSpec
-        Overlays.SceneServerWaiSpec
-        Overlays.WebsocketServerWaiSpec
-        Util.UtilsSpec
     build-depends:
         base
       , aeson
@@ -155,14 +131,12 @@ test-suite file-server-demo-test
       , hspec-wai
       , hspec-wai-json
       , http-types
-      , monad-metrics
       , mtl
       , persistent
       , persistent-postgresql
       , QuickCheck
       , servant-auth-server
       , text
-      , transformers
       , file-server-demo
       , uuid
       , wai

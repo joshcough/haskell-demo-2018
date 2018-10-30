@@ -1,7 +1,6 @@
 
 module Helpers (
   -- Common users used throughout testing
-    testTeam1Name, testTeam1, createTeam1Obj, testTeam1V, createTeam1V,
     adminUsername, adminEmail, adminPassword, adminSettings, adminUser,
     testUser1Username, testUser1Email, testUser1Password, testUser1Settings,
     testUser1, testUser1V, testUser1Login, testUser1LoginV, createTestUser1V,
@@ -37,7 +36,7 @@ import           Test.Hspec.Wai
 import           Test.Hspec.Wai.JSON         (json)
 
 import           Api                         (app)
-import           Auth.Models                 (CreateTeam(..), CreateUser(..), Login(..), Team(..), User(..))
+import           Auth.Models                 (CreateUser(..), Login(..), User(..))
 import           Config                      (App, Config (..), runAppTInTest, runDb)
 import           Init                        (acquireConfig)
 
@@ -67,7 +66,7 @@ setupTeardown runTestsWith = do
 setupTeardownDb :: Config -> IO ()
 setupTeardownDb config = runAppToIO config . runDb $ truncateTables
     where
-    tables = ["teams", "users", "scenes", "scene_items"]
+    tables = ["users"]
     truncateTables = rawExecute (pack $ "TRUNCATE TABLE " ++ intercalate ", " tables ++ " RESTART IDENTITY CASCADE") []
 
 testApp :: IO Application
@@ -125,7 +124,6 @@ withNonAdminAuth = withAuth testUser1
 
 withUserAuth :: (LBS.ByteString -> WaiSession a) -> WaiSession a
 withUserAuth f = withAdminAuth $ \u -> do
-    postJson' "/teams" u createTeam1V     `shouldRespondWith` [json|1|]
     postJson' "/users" u createTestUser1V `shouldRespondWith` [json|1|]
     withAuth testUser1 f
 
@@ -140,9 +138,6 @@ withAuth u f = do
 ---
 --- Common test data used throughout testing
 ---
-
-testTeam1Name :: Text
-testTeam1Name = "USA"
 
 testUser1Username, testUser1Email, testUser1Password :: Text
 testUser1Username = "daut"
@@ -169,17 +164,14 @@ testUser1Settings = object []
 testUser2Settings = object []
 adminSettings     = object []
 
-testTeam1 :: Team
-testTeam1 = Team 1 "USA" testUser1Settings
-
 testUser1 :: User
-testUser1 = User 1 (teamId testTeam1) testUser1Username testUser1Email testUser1Settings False testUser1Token
+testUser1 = User 1 testUser1Username testUser1Email
 
 testUser2 :: User
-testUser2 = User 2 (teamId testTeam1) testUser2Username testUser2Email testUser2Settings False testUser2Token
+testUser2 = User 2 testUser2Username testUser2Email
 
 adminUser :: User
-adminUser = User 1 (teamId testTeam1) adminUsername adminEmail adminSettings True adminToken
+adminUser = User 1 adminUsername adminEmail
 
 testUser1Login :: Login
 testUser1Login = Login testUser1Email testUser1Password
@@ -187,18 +179,13 @@ testUser1Login = Login testUser1Email testUser1Password
 testUser2Login :: Login
 testUser2Login = Login testUser2Email testUser2Password
 
-createTeam1Obj :: CreateTeam
-createTeam1Obj = CreateTeam (teamName testTeam1) testUser1Settings
-
 createTestUser1Obj :: CreateUser
-createTestUser1Obj = CreateUser (userName testUser1) (teamId testTeam1) (userEmail testUser1) testUser1Password testUser1Settings
+createTestUser1Obj = CreateUser (userName testUser1) (userEmail testUser1) testUser1Password
 
 createTestUser2Obj :: CreateUser
-createTestUser2Obj = CreateUser (userName testUser2) (teamId testTeam1) (userEmail testUser2) testUser2Password testUser2Settings
+createTestUser2Obj = CreateUser (userName testUser2) (userEmail testUser2) testUser2Password
 
-testTeam1V, createTeam1V, testUser1V, testUser1LoginV, createTestUser1V, testUser2V, testUser2LoginV, createTestUser2V :: Value
-testTeam1V       = toJSON testTeam1
-createTeam1V     = toJSON createTeam1Obj
+testUser1V, testUser1LoginV, createTestUser1V, testUser2V, testUser2LoginV, createTestUser2V :: Value
 testUser1V       = toJSON testUser1
 testUser1LoginV  = toJSON testUser1Login
 createTestUser1V = toJSON createTestUser1Obj

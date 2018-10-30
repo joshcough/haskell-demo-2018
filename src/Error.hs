@@ -8,8 +8,8 @@ module Error(
     ClassifiedError(..),
     AppError(..),
     ThrowAll(..),
-    ProverlaysError,
-    ProverlaysError'(..),
+    FileServerDemoError,
+    FileServerDemoError'(..),
     catchAuth,
     throwToIO,
     defaultToRollbarEvent,
@@ -19,7 +19,6 @@ module Error(
 
 import Util.Utils (tShow)
 
-import Control.Exception (Exception)
 import Control.Exception
 import Control.Lens (prism, makeClassyPrisms)
 import Control.Monad.Except (MonadError, catchError, throwError)
@@ -77,20 +76,20 @@ data AppError e
 
 makeClassyPrisms ''AppError
 
-type ProverlaysError = AppError ProverlaysError'
+type FileServerDemoError = AppError FileServerDemoError'
 
-data ProverlaysError'
-    = ProverlaysMiscError String
+newtype FileServerDemoError'
+    = DemoMiscError String
     deriving (Show, Eq)
 
-instance ClassifiedError ProverlaysError' where
-    isUnexpected (ProverlaysMiscError _) = True
+instance ClassifiedError FileServerDemoError' where
+    isUnexpected (DemoMiscError _) = True
 
-instance TitledError ProverlaysError' where
-    getErrorTitle (ProverlaysMiscError _) = "Unknown Error"
+instance TitledError FileServerDemoError' where
+    getErrorTitle (DemoMiscError _) = "Unknown Error"
 
-instance ToServant ProverlaysError' where
-    toServantErr (ProverlaysMiscError _) = err500
+instance ToServant FileServerDemoError' where
+    toServantErr (DemoMiscError _) = err500
 
 instance Exception e => Exception (AppError e)
 
@@ -178,7 +177,7 @@ class ThrowAll a where
   --
   -- > throwAll err400 :: Handler a :<|> Handler b :<|> Handler c
   -- >    == throwError err400 :<|> throwError err400 :<|> err400
-  throwAll :: ProverlaysError -> a
+  throwAll :: FileServerDemoError -> a
 
 instance (ThrowAll a, ThrowAll b) => ThrowAll (a :<|> b) where
   throwAll e = throwAll e :<|> throwAll e
@@ -188,5 +187,5 @@ instance (ThrowAll a, ThrowAll b) => ThrowAll (a :<|> b) where
 instance {-# OVERLAPPING #-} ThrowAll b => ThrowAll (a -> b) where
   throwAll e = const $ throwAll e
 
-instance {-# OVERLAPPABLE #-} (MonadError ProverlaysError m) => ThrowAll (m a) where
+instance {-# OVERLAPPABLE #-} (MonadError FileServerDemoError m) => ThrowAll (m a) where
   throwAll = throwError

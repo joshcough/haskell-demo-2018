@@ -15,7 +15,7 @@ import           Servant.Multipart           (FileData(..), MultipartData(..), M
 import           Auth.DatabaseModels         (DbUserId)
 import           Auth.Models                 (User(..))
 import           Config                      (AppT, runDb)
-import           Error                       (ProverlaysError)
+import           Error                       (FileServerDemoError)
 import           FileServer.DatabaseModels   (DbFolderId, DbFileId, DbFile(..))
 import           FileServer.Models           (File(..), Folder(..), MoveRequest(..))
 import qualified FileServer.S3               as S3
@@ -24,7 +24,7 @@ import           Logging                     (MonadLoggerJSON, logDebug)
 
 type FileServerM m = (Accessible m DbFileId (Entity DbFile),
                       Accessible m DbFolderId (Folder (Entity DbFile)),
-                      MonadError ProverlaysError m,
+                      MonadError FileServerDemoError m,
                       S3.S3FileServer m,
                       Db.FilesDb m,
                       Monad m,
@@ -56,9 +56,9 @@ fileServer :: (MonadIO m) => User -> ServerT FileServerAPI (AppT m)
 fileServer caller = toServant $ FileServer { fileServerFolders, fileServerFiles, fileServerMove }
     where
     fileServerFolders = toServant FoldersAPI {
-        folderAPIGetFolderById = \fid -> getFolder caller fid
-      , folderAPICreateFolder = \fid -> insertFolder caller fid
-      , folderAPIDelteFolder = \fid -> deleteFolder caller fid
+        folderAPIGetFolderById = getFolder caller
+      , folderAPICreateFolder = insertFolder caller
+      , folderAPIDelteFolder = deleteFolder caller
       , folderAPIRootFolder = getRootFolder caller
     }
     fileServerFiles = toServant FilesAPI {
@@ -138,7 +138,7 @@ instance MonadIO m => Accessible (AppT m) DbFileId (Entity DbFile) where
     getUserId = pure . dbFileUserId . entityVal
 
 -- |
-withAccess :: (MonadError ProverlaysError m, Monad m, Accessible m fid f) => User -> fid -> (f -> m a) -> m a
+withAccess :: (MonadError FileServerDemoError m, Monad m, Accessible m fid f) => User -> fid -> (f -> m a) -> m a
 withAccess caller fid m = do
     mf <- readFromDb fid
     maybeOr404 mf $ \f -> do

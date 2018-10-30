@@ -65,8 +65,8 @@ acquireConfig = do
 acquireAwsConfig :: IO AwsConfig
 acquireAwsConfig = do
     _awsConfigS3RootUrl               <- lookupSetting' "AWS_S3_ROOT_URL" "https://s3.amazonaws.com/"
-    _awsConfigProverlaysBucketName    <- lookupSetting' "PROVERLAYS_BUCKET" "proverlays"
-    let _awsConfigProverlaysBucketUrl = _awsConfigS3RootUrl <> _awsConfigProverlaysBucketName <> "/"
+    _awsConfigDemoBucketName    <- lookupSetting' "DEMO_BUCKET" "demo"
+    let _awsConfigDemoBucketUrl = _awsConfigS3RootUrl <> _awsConfigDemoBucketName <> "/"
     _awsConfigEnv                     <- do lgr <- newLogger Debug stdout
                                             newEnv Discover <&> set envLogger lgr
     return AwsConfig {..}
@@ -98,10 +98,10 @@ lookupSetting env def = do
 
 -- | rollbar
 mkRollbar :: IO RollbarCfg
-mkRollbar = RollbarCfg  <$> ((RB.AccessToken . T.pack) <$> getEnv "ROLLBAR_TOKEN")
-                        <*> ((RB.Environment . T.pack) <$> getEnv "ROLLBAR_ENVIRONMENT")
-                        <*> ((fmap . fmap) (RB.Host . T.pack) (lookupEnv "ROLLBAR_HOST"))
-                        <*> ((fmap . fmap) (RB.CodeVersion . T.pack) (lookupEnv "SOURCE_VERSION"))
+mkRollbar = RollbarCfg  <$> (RB.AccessToken . T.pack <$> getEnv "ROLLBAR_TOKEN")
+                        <*> (RB.Environment . T.pack <$> getEnv "ROLLBAR_ENVIRONMENT")
+                        <*> (fmap . fmap) (RB.Host . T.pack) (lookupEnv "ROLLBAR_HOST")
+                        <*> (fmap . fmap) (RB.CodeVersion . T.pack) (lookupEnv "SOURCE_VERSION")
                         <*> (maybe False read <$> lookupEnv "ROLLBAR_MUTE")
 
 mkHttp :: IO HttpCfg

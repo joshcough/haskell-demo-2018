@@ -16,11 +16,10 @@ module Config (
   , configPool, configEnv, configPort, configCookies, configJWT, configHttp, configRollbar
   ) where
 
-import           Control.Monad.Except                 (liftIO)
+import           Control.Monad.Except                 (ExceptT(..), runExceptT, liftIO)
 import           Control.Lens                         ((^.))
 import           Control.Lens.TH                      (makeClassy)
 import           Control.Monad                        (when)
-import           Control.Monad.Except                 (ExceptT(..), runExceptT)
 import           Control.Monad.Reader                 (MonadIO, MonadReader, ReaderT(..), asks)
 import qualified Control.Monad.Trans.AWS              as AWS
 import           Data.Aeson                           ((.=))
@@ -47,8 +46,8 @@ data Environment
 -- | The AWS Config for our application
 data AwsConfig = AwsConfig {
     _awsConfigS3RootUrl            :: Text
-  , _awsConfigProverlaysBucketName :: Text
-  , _awsConfigProverlaysBucketUrl  :: Text
+  , _awsConfigDemoBucketName :: Text
+  , _awsConfigDemoBucketUrl  :: Text
   , _awsConfigEnv                  :: AWS.Env
   }
 makeClassy ''AwsConfig
@@ -82,7 +81,7 @@ instance HasLoggingCfg Config where
 ---
 ---
 
-type AppT m = AppT' ProverlaysError m
+type AppT m = AppT' FileServerDemoError m
 type AppT' e m = ReaderT Config (ExceptT e (LoggingJSONT m))
 
 type App = AppT IO

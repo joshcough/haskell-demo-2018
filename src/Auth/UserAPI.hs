@@ -12,10 +12,9 @@ import           Servant.Auth.Server
 import           Auth.DatabaseModels         (DbUserId)
 import           Auth.Models                 (CreateUser(..), Login(..), LoginSuccess(..), User(..))
 import qualified Auth.Storage.UserStorage    as Db
-import           Error                       (ProverlaysError)
+import           Error                       (FileServerDemoError)
 import           Config                      (AppT, Config(..), runDb)
 import           Logging                     (logDebug)
-import           ServantHelpers              (maybeOr401, maybeOr404, maybeOr500, adminOr401, guard401, callerIsUserOrIsAdminElse401)
 
 type SetCookieHeader  = Header "Set-Cookie" SetCookie
 type SetCookieHeaders = '[SetCookieHeader, SetCookieHeader]
@@ -43,7 +42,7 @@ login (Login e pw) = do
     validate hashedPw = validatePassword (encodeUtf8 hashedPw) (encodeUtf8 pw)
 
 -- |
-applyCookies :: (MonadError ProverlaysError m, MonadIO m, MonadReader Config m) =>
+applyCookies :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) =>
     User -> m (Headers SetCookieHeaders LoginSuccess)
 applyCookies usr = do
     cookieSettings <- asks _configCookies
@@ -103,5 +102,5 @@ updateUser caller uid u = do
     callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid . const . runDb $ Db.updateUserIfExists uid u
 
 -- | Look up a user by id. If it exist, run an operation on it. If not, throw a 404.
-withUserOr404 :: (MonadError ProverlaysError m, MonadIO m, MonadReader Config m) => DbUserId -> (User -> m b) -> m b
+withUserOr404 :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) => DbUserId -> (User -> m b) -> m b
 withUserOr404 uid m = runDb (Db.getUserById uid) >>= flip maybeOr404 m

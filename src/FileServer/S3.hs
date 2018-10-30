@@ -69,7 +69,7 @@ instance (MonadIO m) => S3FileServer (AppT' e m) where
         return files
 
     withS3Paths e = do
-        s3Bucket <- _awsConfigProverlaysBucketUrl <$> asks _configAwsEnv
+        s3Bucket <- _awsConfigDemoBucketUrl <$> asks _configAwsEnv
         return $ entityToFile s3Bucket e
 
 -- |
@@ -95,7 +95,7 @@ putChunkedFile p@(PutRequest b k f) = do
 
 -- |
 configBucket :: Monad m => AppT' e m BucketName
-configBucket = BucketName . _awsConfigProverlaysBucketName <$> asks _configAwsEnv
+configBucket = BucketName . _awsConfigDemoBucketName <$> asks _configAwsEnv
 
 -- |
 runSend :: (AWSRequest r, Show r, MonadIO m) => r -> AppT' e m ()

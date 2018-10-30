@@ -24,7 +24,7 @@ import qualified Servant.Generic as S
 
 import           Auth.DatabaseModels         (DbUserId)
 import           Auth.Models                 (User(..))
-import           Error                       (AppError(..), AuthError(..), ProverlaysError, ProverlaysError'(..))
+import           Error                       (AppError(..), AuthError(..), FileServerDemoError, FileServerDemoError'(..))
 
 ---
 --- servant generic helpers
@@ -39,30 +39,30 @@ toServant = S.toServant
 --- error and access handling
 ---
 
-unexpected :: MonadError ProverlaysError m => Text -> m a
-unexpected t = throwError . AppAppError . ProverlaysMiscError $ unpack t
+unexpected :: MonadError FileServerDemoError m => Text -> m a
+unexpected t = throwError . AppAppError . DemoMiscError $ unpack t
 
-guard401 :: MonadError ProverlaysError m => Bool -> m a -> m a
+guard401 :: MonadError FileServerDemoError m => Bool -> m a -> m a
 guard401 b m = if b then m else throwError $ AppNotFoundError ""
 
-maybeOr404 :: MonadError ProverlaysError m => Maybe a -> (a -> m b) -> m b
+maybeOr404 :: MonadError FileServerDemoError m => Maybe a -> (a -> m b) -> m b
 maybeOr404 = maybeOrErr $ AppNotFoundError ""
 
-maybeOr401 :: MonadError ProverlaysError m => Maybe a -> (a -> m b) -> m b
+maybeOr401 :: MonadError FileServerDemoError m => Maybe a -> (a -> m b) -> m b
 maybeOr401 = maybeOrErr (AppAuthError NoAuthError)
 
-maybeOr500 :: MonadError ProverlaysError m => Text -> Maybe a -> (a -> m b) -> m b
-maybeOr500 msg = maybeOrErr (AppAppError $ ProverlaysMiscError $ unpack msg)
+maybeOr500 :: MonadError FileServerDemoError m => Text -> Maybe a -> (a -> m b) -> m b
+maybeOr500 msg = maybeOrErr (AppAppError $ DemoMiscError $ unpack msg)
 
-maybeOrErr :: MonadError ProverlaysError m => ProverlaysError -> Maybe a -> (a -> m b) -> m b
+maybeOrErr :: MonadError FileServerDemoError m => FileServerDemoError -> Maybe a -> (a -> m b) -> m b
 maybeOrErr err = flip $ maybe (throwError err)
 
-adminOr401 :: MonadError ProverlaysError m => User -> m a -> m a
+adminOr401 :: MonadError FileServerDemoError m => User -> m a -> m a
 adminOr401 u m = if userEmail u == "joshcough@gmail.com" then m else throwError (AppAuthError NoAuthError)
 
-callerIsUserOr401 :: MonadError ProverlaysError m => User -> DbUserId -> m a -> m a
+callerIsUserOr401 :: MonadError FileServerDemoError m => User -> DbUserId -> m a -> m a
 callerIsUserOr401 caller uid m = if userId caller == fromSqlKey uid then m else throwError (AppAuthError NoAuthError)
 
-callerIsUserOrIsAdminElse401 :: MonadError ProverlaysError m => User -> DbUserId -> m a -> m a
+callerIsUserOrIsAdminElse401 :: MonadError FileServerDemoError m => User -> DbUserId -> m a -> m a
 callerIsUserOrIsAdminElse401 caller uid m =
     if userEmail caller == "joshcough@gmail.com" || userId caller == fromSqlKey uid then m else throwError (AppAuthError NoAuthError)

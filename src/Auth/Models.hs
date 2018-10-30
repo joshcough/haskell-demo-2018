@@ -19,7 +19,7 @@ data Login = Login {
   , loginPassword :: Text
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-data LoginSuccess = LoginSuccess {
+newtype LoginSuccess = LoginSuccess {
     loginSuccessUser :: User
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

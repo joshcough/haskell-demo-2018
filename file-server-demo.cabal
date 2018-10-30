@@ -1,0 +1,178 @@
+name:                file-server-demo
+version:             0.2.0.0
+synopsis:            Brief example of a bunch of haskell stuff
+description:         Brief example of a bunch of haskell stuff
+license:             MIT
+license-file:        LICENSE
+author:              Josh Cough
+maintainer:          joshcough@gmail.com
+copyright:           2018 Josh Cough
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.18
+
+source-repository head
+    type:
+        git
+    location:
+        https://bitbucket.org/joshcough/file-server-demo
+
+executable file-server-demo-server
+    main-is: Main.hs
+    build-depends: base >= 4.9 && < 5.0, file-server-demo
+    hs-source-dirs: app
+    default-language: Haskell2010
+    ghc-options: -fwarn-unused-imports -Wall -Werror -Werror -fwarn-unused-binds -fwarn-unused-imports
+    default-extensions:  OverloadedStrings TypeApplications ScopedTypeVariables AllowAmbiguousTypes NamedFieldPuns
+                         FlexibleContexts TypeFamilies TypeOperators MultiParamTypeClasses FlexibleInstances GADTs
+                         DataKinds ConstraintKinds DeriveGeneric QuasiQuotes RankNTypes TypeSynonymInstances
+                         LambdaCase RecordWildCards DeriveFunctor FunctionalDependencies TemplateHaskell TupleSections
+
+library
+    default-language:
+        Haskell2010
+    default-extensions:  OverloadedStrings TypeApplications ScopedTypeVariables AllowAmbiguousTypes NamedFieldPuns
+                         FlexibleContexts TypeFamilies TypeOperators MultiParamTypeClasses FlexibleInstances GADTs
+                         DataKinds ConstraintKinds DeriveGeneric DeriveFoldable DeriveTraversable QuasiQuotes RankNTypes
+                         TypeSynonymInstances LambdaCase RecordWildCards DeriveFunctor FunctionalDependencies
+                         TemplateHaskell TupleSections
+    hs-source-dirs:
+        src
+    exposed-modules:
+        Api
+      , Config
+      , DevelMain
+      , Error
+      , Init
+      , Logging
+      , KeyGen
+      , Auth.DatabaseModels
+      , Auth.Models
+      , Auth.PSBridge
+      , Auth.Storage.UserStorage
+      , Auth.UserAPI
+      , FileServer.DatabaseModels
+      , FileServer.FileServerAPI
+      , FileServer.Models
+      , FileServer.S3
+      , FileServer.Storage
+      , ServantHelpers
+      , PSBridge
+      , Util.Utils
+    build-depends:
+        base >= 4.9 && < 5.0
+      , aeson
+      , aeson-pretty
+      , amazonka
+      , amazonka-s3
+      , bcrypt
+      , binary
+      , blaze-html
+      , blaze-markup
+      , bytestring
+      , conduit
+      , containers
+      , directory
+      , ekg
+      , ekg-core
+      , esqueleto
+      , exceptions
+      , fast-logger
+      , filepath
+      , foreign-store
+      , http-api-data
+      , jose
+      , lens
+      , lens-aeson
+      , microlens
+      , MissingH
+      , monad-control
+      , monad-logger
+      , monad-metrics
+      , mtl
+      , nano-http >=0.1.1
+      , persistent
+      , persistent-postgresql
+      , persistent-template
+      , postgresql-simple-url
+      , postgresql-simple
+      , purescript-bridge >= 0.13
+      , resourcet
+      , resource-pool
+      , rollbar
+      , safe
+      , servant >= 0.13 && < 0.14
+      , servant-auth >=0.3.1.0
+      , servant-auth-server
+      , servant-blaze
+      , servant-generic
+      , servant-js >= 0.9 && < 0.10
+      , servant-multipart
+      , servant-server >= 0.13 && < 0.14
+      , servant-websockets
+      , template-haskell
+      , text
+      , time
+      , transformers
+      , transformers-base
+      , unliftio-core
+      , unordered-containers
+      , uuid
+      , wai
+      , wai-extra
+      , wai-middleware-metrics
+      , warp
+      , websockets
+      , zip
+    ghc-options:
+        -fwarn-unused-imports -Wall -fwarn-unused-binds -fwarn-unused-imports
+        -- -ddump-splices
+
+test-suite file-server-demo-test
+    type:
+        exitcode-stdio-1.0
+    hs-source-dirs:
+        test
+    main-is:
+        Spec.hs
+    other-modules:
+        Auth.TeamDbSpec
+        Auth.TeamServerWaiSpec
+        Auth.UserDbSpec
+        Auth.UserServerWaiSpec
+        Helpers
+        Overlays.AdminServerWaiSpec
+        Overlays.SceneDbSpec
+        Overlays.SceneServerWaiSpec
+        Overlays.WebsocketServerWaiSpec
+        Util.UtilsSpec
+    build-depends:
+        base
+      , aeson
+      , aeson-pretty
+      , bytestring
+      , hspec
+      , hspec-wai
+      , hspec-wai-json
+      , http-types
+      , monad-metrics
+      , mtl
+      , persistent
+      , persistent-postgresql
+      , QuickCheck
+      , servant-auth-server
+      , text
+      , transformers
+      , file-server-demo
+      , uuid
+      , wai
+      , wai-extra
+      , warp
+    ghc-options:
+        -threaded -rtsopts -with-rtsopts=-N -fwarn-unused-imports  -Wall -fwarn-unused-binds -fwarn-unused-imports
+    default-language:
+        Haskell2010
+    default-extensions:  OverloadedStrings TypeApplications ScopedTypeVariables AllowAmbiguousTypes NamedFieldPuns
+                         FlexibleContexts TypeFamilies TypeOperators MultiParamTypeClasses FlexibleInstances GADTs
+                         DataKinds ConstraintKinds DeriveGeneric QuasiQuotes RankNTypes TypeSynonymInstances
+                         LambdaCase RecordWildCards DeriveFunctor FunctionalDependencies TemplateHaskell TupleSections

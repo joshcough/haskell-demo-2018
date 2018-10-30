@@ -1,0 +1,24 @@
+flags: {}
+packages:
+- '.'
+- location:
+    git: https://github.com/bitemyapp/esqueleto.git
+    commit: 08c9b4cdf977d5bcd1baba046a007940c1940758
+  extra-dep: true
+- location:
+    git: https://github.com/ralphmorton/nano-http.git
+    commit: bfccf7011964fcd8a12f7bcbf20ac5ef06eb4ede
+  extra-dep: true
+- location:
+    git: https://github.com/collegevine/rollbar.git
+    commit: 08d7405292d71b94ea3c0562716330e77cfb93d8
+  extra-dep: true
+extra-deps:
+- amazonka-1.6.0
+- amazonka-core-1.6.0
+- amazonka-s3-1.6.0
+- purescript-bridge-0.13.0.0
+- servant-auth-0.3.2.0
+- servant-auth-server-0.4.0.0
+- servant-multipart-0.11.2
+resolver: lts-11.8

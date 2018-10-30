@@ -9,6 +9,7 @@ module Auth.Storage.UserStorage (
   , updateUserIfExists
   ) where
 
+import           Control.Monad               (forM_)
 import           Control.Monad.Except        (MonadIO, liftIO)
 import           Crypto.BCrypt               (hashPasswordUsingPolicy, slowerBcryptHashingPolicy)
 import           Data.ByteString             (ByteString)
@@ -18,7 +19,7 @@ import           Database.Esqueleto
 import qualified Database.Persist.Postgresql as P
 
 import           Auth.DatabaseModels         (DbUser(..), DbUserId)
-import qualified Auth.DatabaseModels        as Db
+import qualified Auth.DatabaseModels         as Db
 import           Auth.Models                 (CreateUser(..), User(..))
 
 -- |
@@ -55,9 +56,7 @@ createUser (CreateUser name email pass) = do
 updateUserIfExists ::  MonadIO m => DbUserId -> User -> SqlPersistT m ()
 updateUserIfExists uid (User _ name email) = do
     maybeUser <- getEntity uid
-    case maybeUser of
-        Just (Entity k v) -> replace k $ DbUser name email (dbUserHashedPassword v)
-        Nothing -> return ()
+    forM_ maybeUser $ \(Entity k v) -> replace k $ DbUser name email (dbUserHashedPassword v)
 
 -- |
 entityToUser :: Entity DbUser -> User

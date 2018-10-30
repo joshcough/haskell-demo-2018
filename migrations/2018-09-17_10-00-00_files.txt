@@ -4,7 +4,7 @@ Depends:
 Apply: |
     CREATE TABLE folders (
        id SERIAL PRIMARY KEY,
-       team_id bigint REFERENCES teams(id),
+       user_id bigint REFERENCES users(id),
        parent_id bigint NOT NULL REFERENCES folders(id),
        name character varying NOT NULL,
        Unique (parent_id, name)
@@ -12,7 +12,7 @@ Apply: |
 
     CREATE TABLE files (
        id SERIAL PRIMARY KEY,
-       team_id bigint NOT NULL REFERENCES teams(id),
+       user_id bigint NOT NULL REFERENCES users(id),
        folder_id bigint NOT NULL REFERENCES folders(id),
        original_file_name character varying NOT NULL
     );

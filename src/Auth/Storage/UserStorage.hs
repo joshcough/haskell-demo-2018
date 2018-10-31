@@ -1,18 +1,11 @@
 
 module Auth.Storage.UserStorage (
-    createUser
-  , deleteUserById
-  , entityToUser
-  , getUserByEmail
-  , getUserById
-  , getUserByUsername
-  , updateUserIfExists
+    UserDb(..)
   ) where
 
 import           Control.Monad               (forM_)
 import           Control.Monad.Except        (MonadIO, liftIO)
 import           Crypto.BCrypt               (hashPasswordUsingPolicy, slowerBcryptHashingPolicy)
-import           Data.ByteString             (ByteString)
 import           Data.Text                   (Text)
 import           Data.Text.Encoding          (decodeUtf8, encodeUtf8)
 import           Database.Esqueleto
@@ -21,42 +14,46 @@ import qualified Database.Persist.Postgresql as P
 import           Auth.DatabaseModels         (DbUser(..), DbUserId)
 import qualified Auth.DatabaseModels         as Db
 import           Auth.Models                 (CreateUser(..), User(..))
+import           Config                      (AppT', runDb)
 
--- |
-getUserById :: MonadIO m => DbUserId -> SqlPersistT m (Maybe User)
-getUserById = fmap (fmap entityToUser) . getEntity
+class Monad m => UserDb m where
+    getUserById :: DbUserId -> m (Maybe User)
+    getUserByUsername :: Text -> m (Maybe User)
+    getUserByEmail :: Text -> m (Maybe (User, Text))
+    deleteUserById :: DbUserId -> m ()
+    createUser :: CreateUser -> m (Maybe DbUserId)
+    -- TODO: this one is terrible.
+    updateUserIfExists :: DbUserId -> User -> m ()
 
--- |
-getUserByUsername :: (MonadIO m) => Text -> SqlPersistT m (Maybe User)
-getUserByUsername username = fmap entityToUser <$> selectFirst [Db.DbUserName P.==. username] []
+instance MonadIO m => UserDb (AppT' e m) where
+    getUserById = runDb . getUserById
+    getUserByUsername = runDb . getUserByUsername
+    getUserByEmail = runDb . getUserByEmail
+    deleteUserById = runDb . deleteUserById
+    createUser = runDb . createUser
+    updateUserIfExists uid = runDb . updateUserIfExists uid
 
--- |
-getUserByEmail :: (MonadIO m) => Text -> SqlPersistT m (Maybe (User, Text))
-getUserByEmail email = fmap f <$> selectFirst [Db.DbUserEmail P.==. email] []
-    where f e@(Entity _ dbUser) = (entityToUser e, dbUserHashedPassword dbUser)
+instance MonadIO m => UserDb (SqlPersistT m) where
+    getUserById = fmap (fmap entityToUser) . getEntity
 
--- |
-deleteUserById :: MonadIO m => DbUserId -> SqlPersistT m ()
-deleteUserById = P.deleteCascade
+    getUserByUsername username = fmap entityToUser <$> selectFirst [Db.DbUserName P.==. username] []
 
--- |
-createUser :: MonadIO m => CreateUser -> SqlPersistT m (Maybe DbUserId)
-createUser (CreateUser name email pass) = do
-    mPassword <- liftIO $ encryptPassword pass
-    case mPassword of
-        Nothing -> return Nothing
-        Just password' -> do
-            newUser <- insert $ DbUser name email (decodeUtf8 password')
-            return . Just $ newUser
-    where
-    encryptPassword :: Text -> IO (Maybe ByteString)
-    encryptPassword = hashPasswordUsingPolicy slowerBcryptHashingPolicy . encodeUtf8
+    getUserByEmail email = fmap f <$> selectFirst [Db.DbUserEmail P.==. email] []
+        where f e@(Entity _ dbUser) = (entityToUser e, dbUserHashedPassword dbUser)
 
--- |
-updateUserIfExists ::  MonadIO m => DbUserId -> User -> SqlPersistT m ()
-updateUserIfExists uid (User _ name email) = do
-    maybeUser <- getEntity uid
-    forM_ maybeUser $ \(Entity k v) -> replace k $ DbUser name email (dbUserHashedPassword v)
+    deleteUserById = P.deleteCascade
+
+    createUser (CreateUser name email pass) = do
+        mPassword <- liftIO $ encryptPassword pass
+        case mPassword of
+            Nothing -> return Nothing -- TODO: need to throw an error here...
+            Just password' -> Just <$> insert (DbUser name email $ decodeUtf8 password')
+        where
+        encryptPassword = hashPasswordUsingPolicy slowerBcryptHashingPolicy . encodeUtf8
+
+    updateUserIfExists uid (User _ name email) = do
+        maybeUser <- getEntity uid
+        forM_ maybeUser $ \(Entity k v) -> replace k $ DbUser name email (dbUserHashedPassword v)
 
 -- |
 entityToUser :: Entity DbUser -> User

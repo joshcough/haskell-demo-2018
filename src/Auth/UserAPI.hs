@@ -14,7 +14,7 @@ import           Auth.Models                 (CreateUser(..), Login(..), LoginSu
 import qualified Auth.Storage.UserStorage    as Db
 import           Error                       (FileServerDemoError)
 import           Config                      (AppT, Config(..), runDb)
-import           Logging                     (logDebug)
+import           Logging                     (logDebug, logDebug_)
 
 type SetCookieHeader  = Header "Set-Cookie" SetCookie
 type SetCookieHeaders = '[SetCookieHeader, SetCookieHeader]
@@ -45,14 +45,13 @@ login (Login e pw) = do
     where
     validate hashedPw = validatePassword (encodeUtf8 hashedPw) (encodeUtf8 pw)
 
--- |
-applyCookies :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) =>
-    User -> m (Headers SetCookieHeaders LoginSuccess)
-applyCookies usr = do
-    cookieSettings <- asks _configCookies
-    jwtSettings    <- asks _configJWT
-    mApplyCookies  <- liftIO $ acceptLogin cookieSettings jwtSettings usr
-    maybeOr401 mApplyCookies (\app -> return . app $ LoginSuccess usr)
+    applyCookies :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) =>
+        User -> m (Headers SetCookieHeaders LoginSuccess)
+    applyCookies usr = do
+        cookieSettings <- asks _configCookies
+        jwtSettings    <- asks _configJWT
+        mApplyCookies  <- liftIO $ acceptLogin cookieSettings jwtSettings usr
+        maybeOr401 mApplyCookies (\app -> return . app $ LoginSuccess usr)
 
 ---
 --- User API/Server
@@ -63,10 +62,9 @@ type UserAPI = "users" :> Compose UserServer
 data UserServer route = UserServer {
     userServerGetUserById :: route :- Capture "id" DbUserId :> Get '[JSON] User
   , userServerDeleteUser :: route :- Capture "id" DbUserId :> Delete '[JSON] ()
-  , userServerCreateUser :: route :- ReqBody '[JSON] CreateUser :> Post    '[JSON] DbUserId
+  , userServerCreateUser :: route :- ReqBody '[JSON] CreateUser :> Post '[JSON] DbUserId
   , userServerUpdateUser :: route :- Capture "id" DbUserId :> ReqBody '[JSON] User :> Put '[JSON] ()
   } deriving Generic
-
 
 -- | The server that runs the UserAPI
 userServer :: (MonadIO m) => User -> ServerT UserAPI (AppT m)
@@ -80,25 +78,25 @@ userServer caller = toServant $ UserServer { .. }
 -- | Returns a user by name or throws a 404 error.
 getUserById :: MonadIO m => User -> DbUserId -> AppT m User
 getUserById caller uid = do
-    $(logDebug) "getUserById" ["uid" .= uid]
+    $(logDebug) "getting user" ["uid" .= uid]
     callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid return
 
 -- | Creates a user in the database.
 deleteUser :: MonadIO m => User -> DbUserId -> AppT m ()
 deleteUser caller uid = do
-    $(logDebug) "deleteUser" ["uid" .= uid]
+    $(logDebug) "deleting user" ["uid" .= uid]
     adminOr401 caller $ withUserOr404 uid (const . runDb $ Db.deleteUserById uid)
 
 -- | Creates a user in the database.
 createUser :: MonadIO m => User -> CreateUser -> AppT m DbUserId
 createUser caller c = do
-    $(logDebug) "createUser" []
+    $(logDebug_) "creating user"
     adminOr401 caller $ runDb (Db.createUser c) >>= flip (maybeOr500 "Couldn't create user.") return
 
 -- | Update a user in the database.
 updateUser :: MonadIO m => User -> DbUserId -> User -> AppT m ()
 updateUser caller uid u = do
-    $(logDebug) "updateUser" ["uid" .= uid, "user" .= u]
+    $(logDebug) "updating user" ["uid" .= uid, "user" .= u]
     callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid . const . runDb $ Db.updateUserIfExists uid u
 
 -- | Look up a user by id. If it exist, run an operation on it. If not, throw a 404.

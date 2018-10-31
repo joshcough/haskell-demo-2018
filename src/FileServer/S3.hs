@@ -2,7 +2,6 @@
 module FileServer.S3 (
     S3FileServer(..)
   , UploadFile(..)
-  , configBucket
   ) where
 
 import           Control.Lens                 ((&), (.~))
@@ -15,7 +14,7 @@ import           Data.Aeson                   ((.=))
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
 import           Database.Esqueleto           (Entity(..), fromSqlKey)
-import           Network.AWS.S3        hiding (bucket)
+import           Network.AWS.S3               (ObjectKey(..), BucketName(..), deleteObject, deleteObjects, objectIdentifier, delete', dObjects, putObject)
 
 import           Config                       (AppT', Config(..), AwsConfig(..))
 import           FileServer.DatabaseModels    (DbFile(..))
@@ -47,15 +46,13 @@ class Monad m => S3FileServer m where
 instance (MonadIO m) => S3FileServer (AppT' e m) where
     uploadFile (UploadFile dbFile filePath) = do
         f@File{..} <- withS3Paths dbFile
-        bucket <- configBucket
-        putChunkedFile $ PutRequest bucket (ObjectKey fileS3File) filePath
+        putChunkedFile (ObjectKey fileS3File) filePath
         return f
 
     deleteFile dbFile = do
         f@File{..} <- withS3Paths dbFile
         $(logDebug) "Deleting file in aws" ["fileS3Path" .= fileS3Path]
-        bucket <- configBucket
-        runSend $ deleteObject bucket (ObjectKey fileS3File)
+        withBucket $ \bucket -> deleteObject bucket (ObjectKey fileS3File)
         return f
 
     deleteFolder f = do
@@ -64,8 +61,7 @@ instance (MonadIO m) => S3FileServer (AppT' e m) where
         unless (null files) $ do
             let fileIds = objectIdentifier . ObjectKey . fileS3File <$> files
             $(logDebug) "Deleting folder in aws " ["folderName" .= folderName, "childFiles" .= files]
-            bucket <- configBucket
-            runSend $ deleteObjects bucket (delete' & dObjects .~ fileIds)
+            withBucket $ \bucket -> deleteObjects bucket (delete' & dObjects .~ fileIds)
         return files
 
     withS3Paths e = do
@@ -79,35 +75,26 @@ data UploadFile = UploadFile {
   } deriving (Eq, Show)
 
 -- |
-data PutRequest = PutRequest {
-    _putBucket        :: BucketName -- ^ The bucket to store the file in.
-  , _putFilename      :: ObjectKey  -- ^ The destination object key.
-  , _putLocalFilePath :: FilePath   -- ^ The source file to upload.
-  } deriving (Eq, Ord, Show)
+putChunkedFile :: (MonadIO m) => ObjectKey -> FilePath -> AppT' e m ()
+putChunkedFile k f = do
+    $(logDebug) "Uploading file to aws" ["objectKey" .= show k, "filepath" .= f]
+    bdy <- chunkedFile defaultChunkSize f
+    withBucket $ \bucket -> putObject bucket k bdy
 
 -- |
-putChunkedFile :: (MonadIO m) => PutRequest -> AppT' e m ()
-putChunkedFile p@(PutRequest b k f) = do
-    $(logDebug) "Uploading file to aws" ["putRequest" .= show p]
-    runAwsAction $ do
-        bdy <- chunkedFile defaultChunkSize f
-        void . send $ putObject b k bdy
+withBucket :: (AWSRequest r, Show r, MonadIO m) => (BucketName -> r) -> AppT' e m ()
+withBucket msg = configBucket >>= \bucket -> do
+    $(logDebug) "Sending request to aws" ["request" .= show (msg bucket)]
+    runAwsAction . void $ send (msg bucket)
+    where
 
--- |
-configBucket :: Monad m => AppT' e m BucketName
-configBucket = BucketName . _awsConfigDemoBucketName <$> asks _configAwsEnv
+    configBucket :: Monad m => AppT' e m BucketName
+    configBucket = BucketName . _awsConfigDemoBucketName <$> asks _configAwsEnv
 
--- |
-runSend :: (AWSRequest r, Show r, MonadIO m) => r -> AppT' e m ()
-runSend msg = do
-    $(logDebug) "Sending request to aws" ["request" .= show msg]
-    runAwsAction . void $ send msg
-
--- |
-runAwsAction :: MonadIO m => AWST' Env (ResourceT IO) a -> AppT' e m a
-runAwsAction m = do
-    env <- _awsConfigEnv <$> asks _configAwsEnv
-    liftIO $ runResourceT . runAWST env $ m
+    runAwsAction :: MonadIO m => AWST' Env (ResourceT IO) a -> AppT' e m a
+    runAwsAction m = do
+        env <- _awsConfigEnv <$> asks _configAwsEnv
+        liftIO $ runResourceT . runAWST env $ m
 
 -- |
 entityToFile :: Text -> Entity DbFile -> File

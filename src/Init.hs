@@ -1,7 +1,6 @@
 
 module Init where
 
-import           Control.Concurrent.Chan     (newChan)
 import           Control.Exception           (bracket, throwIO)
 import           Control.Lens                ((<&>), set)
 import           Control.Monad.Logger                 (runNoLoggingT)
@@ -14,7 +13,7 @@ import           Network.HTTP.Nano           (HttpCfg(..), tlsManager)
 import           Network.Wai                 (Application)
 import           Network.Wai.Handler.Warp    (run)
 import           Safe                        (readMay)
-import           Servant.Auth.Server         (defaultCookieSettings, defaultJWTSettings) --, generateKey)
+import           Servant.Auth.Server         (JWTSettings, defaultCookieSettings, defaultJWTSettings) --, generateKey)
 import           System.Environment          (getEnv, lookupEnv)
 import           System.IO                   (stdout)
 import           Web.Rollbar                 (RollbarCfg(..))
@@ -34,11 +33,11 @@ import qualified KeyGen                as KG
 --   runs it, and tears it down on exit
 runApp :: IO ()
 runApp = bracket acquireConfig shutdownApp runApp'
-  where
-    runApp' config = run (_configPort config) =<< initialize config
+    where runApp' config = run (_configPort config) =<< initialize config
 
 -- | The 'initialize' function accepts the required environment information,
 -- initializes the WAI 'Application' and returns it
+-- TODO: why is this IO?
 initialize :: Config -> IO Application
 initialize = pure . app
 
@@ -47,14 +46,9 @@ acquireConfig :: IO Config
 acquireConfig = do
     _configPort         <- lookupSetting "PORT" 8081
     _configEnv          <- lookupSetting "ENV" Development
-    _configPool         <- do dbUrl <- getEnv "DATABASE_URL"
-                              makePool dbUrl _configEnv
-    _configWebSocketEnv <- newChan
+    _configPool         <- makePool _configEnv
     let _configCookies  = defaultCookieSettings
-    _configJWT          <- defaultJWTSettings <$> case _configEnv of
-        Production  -> KG.readProdKey
-        Development -> KG.readDevKey
-        Test        -> KG.readTestKey
+    _configJWT          <- mkJWT _configEnv
     _configHttp         <- mkHttp
     _configAwsEnv       <- acquireAwsConfig
     _configRollbar      <- mkRollbar
@@ -64,14 +58,15 @@ acquireConfig = do
 -- | Allocates resources for AwsConfig
 acquireAwsConfig :: IO AwsConfig
 acquireAwsConfig = do
-    _awsConfigS3RootUrl               <- lookupSetting' "AWS_S3_ROOT_URL" "https://s3.amazonaws.com/"
+    _awsConfigS3RootUrl         <- lookupSetting' "AWS_S3_ROOT_URL" "https://s3.amazonaws.com/"
     _awsConfigDemoBucketName    <- lookupSetting' "DEMO_BUCKET" "demo"
     let _awsConfigDemoBucketUrl = _awsConfigS3RootUrl <> _awsConfigDemoBucketName <> "/"
-    _awsConfigEnv                     <- do lgr <- newLogger Debug stdout
-                                            newEnv Discover <&> set envLogger lgr
+    _awsConfigEnv               <- do lgr <- newLogger Debug stdout
+                                      newEnv Discover <&> set envLogger lgr
     return AwsConfig {..}
 
 -- | Takes care of cleaning up 'Config' resources
+-- TODO: is this  called ever? check perservant
 shutdownApp :: Config -> IO ()
 shutdownApp Config {..} = do
     Pool.destroyAllResources _configPool
@@ -87,14 +82,8 @@ lookupSetting :: Read a => Text -> a -> IO a
 lookupSetting env def = do
     maybeValue <- fmap pack <$> lookupEnv (unpack env)
     maybe (return def) (\str -> maybe (handleFailedRead str) return (readMay $ unpack str)) maybeValue
-  where
-    handleFailedRead str =
-        error . unpack $ mconcat
-            [ "Failed to read [["
-            , str
-            , "]] for environment variable "
-            , env
-            ]
+  where handleFailedRead str =
+            error . unpack $ mconcat [ "Failed to read [[", str, "]] for environment variable ", env ]
 
 -- | rollbar
 mkRollbar :: IO RollbarCfg
@@ -111,13 +100,22 @@ mkLoggingCfg :: IO LoggingCfg
 mkLoggingCfg = Logging.fromEnv
 
 -- | This function creates a 'ConnectionPool' for the given environment.
-makePool :: String -> Environment -> IO ConnectionPool
-makePool dbUrl env = case postgreSQLConnectionString <$> parseDatabaseUrl dbUrl of
-    Nothing  -> throwIO (userError "DATABASE_URL malformed.")
-    Just url -> runNoLoggingT $ createPostgresqlPool url (envPool env)
+makePool :: Environment -> IO ConnectionPool
+makePool env = do
+    dbUrl <- getEnv "DATABASE_URL"
+    case postgreSQLConnectionString <$> parseDatabaseUrl dbUrl of
+        Nothing  -> throwIO (userError "DATABASE_URL malformed.")
+        Just url -> runNoLoggingT $ createPostgresqlPool url (envPool env)
+    where
+    -- | The number of pools to use for a given environment.
+    envPool :: Environment -> Int
+    envPool Test        = 1
+    envPool Development = 1
+    envPool Production  = 8
 
--- | The number of pools to use for a given environment.
-envPool :: Environment -> Int
-envPool Test        = 1
-envPool Development = 1
-envPool Production  = 8
+-- |
+mkJWT :: Environment -> IO JWTSettings
+mkJWT env = defaultJWTSettings <$> case env of
+    Production  -> KG.readProdKey
+    Development -> KG.readDevKey
+    Test        -> KG.readTestKey

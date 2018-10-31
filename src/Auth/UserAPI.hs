@@ -23,10 +23,14 @@ type SetCookieHeaders = '[SetCookieHeader, SetCookieHeader]
 --- Login API/Server
 ---
 
-type LoginAPI = "login" :> ReqBody '[JSON] Login :> Post '[JSON] (Headers SetCookieHeaders LoginSuccess)
+type LoginAPI = "login" :> Compose LoginServer
+
+newtype LoginServer route = LoginServer {
+    loginServerLogin :: route :-  ReqBody '[JSON] Login :> Post '[JSON] (Headers SetCookieHeaders LoginSuccess)
+  } deriving Generic
 
 loginServer :: MonadIO m => ServerT LoginAPI (AppT m)
-loginServer = login
+loginServer = toServant $ LoginServer login
 
 {-
  - Here is the login handler. We do the following:
@@ -54,34 +58,30 @@ applyCookies usr = do
 --- User API/Server
 ---
 
-type UserAPI =
-    "users" :> (
-         Capture "id" DbUserId      :> Get     '[JSON] User
-    :<|> Capture "id" DbUserId      :> Delete  '[JSON] ()
-    :<|> ReqBody '[JSON] CreateUser :> Post    '[JSON] DbUserId
-    :<|> Capture "id" DbUserId      :> ReqBody '[JSON] User :> Put '[JSON] ()
-  )
+type UserAPI = "users" :> Compose UserServer
+
+data UserServer route = UserServer {
+    userServerGetUserById :: route :- Capture "id" DbUserId :> Get '[JSON] User
+  , userServerDeleteUser :: route :- Capture "id" DbUserId :> Delete '[JSON] ()
+  , userServerCreateUser :: route :- ReqBody '[JSON] CreateUser :> Post    '[JSON] DbUserId
+  , userServerUpdateUser :: route :- Capture "id" DbUserId :> ReqBody '[JSON] User :> Put '[JSON] ()
+  } deriving Generic
+
 
 -- | The server that runs the UserAPI
-userServer :: MonadIO m => User -> ServerT UserAPI (AppT m)
-userServer caller =
-         getUserById caller
-    :<|> deleteUser  caller
-    :<|> createUser  caller
-    :<|> updateUser  caller
+userServer :: (MonadIO m) => User -> ServerT UserAPI (AppT m)
+userServer caller = toServant $ UserServer { .. }
+    where
+    userServerGetUserById = getUserById caller
+    userServerDeleteUser = deleteUser caller
+    userServerCreateUser = createUser caller
+    userServerUpdateUser = updateUser caller
 
 -- | Returns a user by name or throws a 404 error.
 getUserById :: MonadIO m => User -> DbUserId -> AppT m User
 getUserById caller uid = do
     $(logDebug) "getUserById" ["uid" .= uid]
     callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid return
-
--- | Returns a user by name or throws a 404 error.
--- TODO: remove this as soon as the websocket auth is fixed
-getUserByIdUNSAFE :: MonadIO m =>  DbUserId -> AppT m User
-getUserByIdUNSAFE uid = do
-    $(logDebug) "getUserById" ["uid" .= uid]
-    withUserOr404 uid return
 
 -- | Creates a user in the database.
 deleteUser :: MonadIO m => User -> DbUserId -> AppT m ()

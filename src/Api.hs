@@ -12,13 +12,9 @@ import           Config                   ( App, AppT, Config (..), runAppT )
 import           Error                    ( AppError(..), AuthError(..), toServantErr, throwAll )
 import           FileServer.FileServerAPI ( FileServerAPI, fileServer )
 
-
-type Protected = UserAPI :<|> FileServerAPI
-
+type Protected   = UserAPI :<|> FileServerAPI
 type Unprotected = LoginAPI
-
-type API' auths = (Auth auths User :> Protected) :<|> Unprotected
-type API        = API' '[Cookie, JWT]
+type API         = (Auth '[Cookie, JWT] User :> Protected) :<|> Unprotected
 
 app :: Config -> Application
 app cfg = serveWithContext
@@ -27,7 +23,6 @@ app cfg = serveWithContext
             (mainServer :<|> files)
     where
     convertApp :: Config -> App a -> Handler a
-    -- TODO: send to rollbar and rethrow to servant
     convertApp cfg' appt = Handler $ do
         errOrResult <- liftIO $ runAppT appt cfg'
         either (throwError . toServantErr) return errOrResult
@@ -39,13 +34,13 @@ app cfg = serveWithContext
         (convertApp cfg)
         (protected :<|> unprotected)
 
-    protected :: MonadIO m => AuthResult User -> ServerT Protected (AppT m)
-    protected (Authenticated u) = userServer u
-                             :<|> fileServer u
-    protected _ = throwAll (AppAuthError NoAuthError)
+protected :: MonadIO m => AuthResult User -> ServerT Protected (AppT m)
+protected (Authenticated u) = userServer u
+                         :<|> fileServer u
+protected _ = throwAll (AppAuthError NoAuthError)
 
-    unprotected :: (MonadThrow m, MonadIO m) => ServerT Unprotected (AppT m)
-    unprotected = loginServer
+unprotected :: (MonadThrow m, MonadIO m) => ServerT Unprotected (AppT m)
+unprotected = loginServer
 
-    files :: Server Raw
-    files = serveDirectoryFileServer "frontend"
+files :: Server Raw
+files = serveDirectoryFileServer "frontend"

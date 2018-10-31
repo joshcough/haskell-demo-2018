@@ -42,8 +42,8 @@ deleteUserById = P.deleteCascade
 -- |
 createUser :: MonadIO m => CreateUser -> SqlPersistT m (Maybe DbUserId)
 createUser (CreateUser name email pass) = do
-    mPassword' <- liftIO $ encryptPassword pass
-    case mPassword' of
+    mPassword <- liftIO $ encryptPassword pass
+    case mPassword of
         Nothing -> return Nothing
         Just password' -> do
             newUser <- insert $ DbUser name email (decodeUtf8 password')

@@ -16,11 +16,10 @@ import           Database.Esqueleto           (Entity(..), fromSqlKey)
 import           Network.AWS.S3               (ObjectKey(..), BucketName(..), deleteObject, putObject)
 
 import           Config                       (AppT', Config(..), AwsConfig(..))
-import           FileServer.DatabaseModels    (DbFile(..))
 import           FileServer.Models            (File(..))
+import           FileServer.Storage           (DbFile(..))
 import           Logging                      (logDebug)
 import           Utils                        (tShow)
-
 
 {-
 For local testing, run this:
@@ -29,7 +28,7 @@ import Config (AppT, runAppT)
 import Init (acquireConfig)
 import Database.Esqueleto (toSqlKey, Entity(..))
 import qualified FileServer.S3 as S3
-import FileServer.DatabaseModels
+import FileServer.Storage
 let f = DbFile (toSqlKey 100) (toSqlKey 200) "Setup.hs"
 (_, c) <- acquireConfig
 runAppT (S3.uploadFile (S3.UploadFile (Entity (toSqlKey 999) f) "Setup.hs") :: AppT IO File) c

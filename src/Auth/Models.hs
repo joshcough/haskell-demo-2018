@@ -1,10 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
 
 module Auth.Models (
     CreateUser(..)
   , Login(..)
-  , LoginSuccess(..)
   , User(..)
   ) where
 
@@ -17,10 +15,6 @@ import           Servant.Auth.Server
 data Login = Login {
     loginEmail    :: Text
   , loginPassword :: Text
-} deriving (Eq, Show, Generic, ToJSON, FromJSON)
-
-newtype LoginSuccess = LoginSuccess {
-    loginSuccessUser :: User
 } deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 data User = User {

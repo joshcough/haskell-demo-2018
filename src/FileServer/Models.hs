@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module FileServer.Models (
     File(..)

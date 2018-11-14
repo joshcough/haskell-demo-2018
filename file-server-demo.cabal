@@ -51,7 +51,6 @@ library
       , Auth.Models
       , Auth.UserAPI
       , Auth.UserStorage
-      , FileServer.DatabaseModels
       , FileServer.FileServerAPI
       , FileServer.Models
       , FileServer.S3
@@ -68,11 +67,9 @@ library
       , bytestring
       , conduit
       , containers
-      , directory
       , esqueleto
       , exceptions
       , fast-logger
-      , filepath
       , foreign-store
       , http-api-data
       , jose
@@ -86,7 +83,6 @@ library
       , persistent-template
       , postgresql-simple-url
       , postgresql-simple
-      , purescript-bridge >= 0.13
       , resourcet
       , resource-pool
       , rollbar

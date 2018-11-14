@@ -8,10 +8,10 @@ import           Data.Text.Encoding          (encodeUtf8)
 import           ServantHelpers
 import           Servant.Auth.Server
 
-import           Auth.Models                 (Login(..), LoginSuccess(..), User(..))
+import           Auth.Models                 (Login(..), User(..))
 import qualified Auth.UserStorage    as Db
 import           Error                       (FileServerDemoError)
-import           Config                      (AppT, Config(..), runDb)
+import           Config                      (AppT, Config(..))
 
 type SetCookieHeader  = Header "Set-Cookie" SetCookie
 type SetCookieHeaders = '[SetCookieHeader, SetCookieHeader]
@@ -23,7 +23,7 @@ type SetCookieHeaders = '[SetCookieHeader, SetCookieHeader]
 type LoginAPI = "login" :> Compose LoginServer
 
 newtype LoginServer route = LoginServer {
-    loginServerLogin :: route :-  ReqBody '[JSON] Login :> Post '[JSON] (Headers SetCookieHeaders LoginSuccess)
+    loginServerLogin :: route :- ReqBody '[JSON] Login :> Post '[JSON] (Headers SetCookieHeaders User)
   } deriving Generic
 
 loginServer :: MonadIO m => ServerT LoginAPI (AppT m)
@@ -35,17 +35,17 @@ loginServer = toServant $ LoginServer login
  - B) Check to see if they entered a valid password, and throw a 401 if not
  - C) Return the jwt token in the header.
  -}
-login :: MonadIO m => Login -> AppT m (Headers SetCookieHeaders LoginSuccess)
+login :: MonadIO m => Login -> AppT m (Headers SetCookieHeaders User)
 login (Login e pw) = do
-    maybeUT <- runDb $ Db.getUserByEmail e
+    maybeUT <- Db.getUserByEmail e
     maybeOr401 maybeUT $ \(user, hashedPw) -> guard401 (validate hashedPw) (applyCookies user)
     where
     validate hashedPw = validatePassword (encodeUtf8 hashedPw) (encodeUtf8 pw)
 
     applyCookies :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) =>
-        User -> m (Headers SetCookieHeaders LoginSuccess)
+        User -> m (Headers SetCookieHeaders User)
     applyCookies usr = do
         cookieSettings <- asks _configCookies
         jwtSettings    <- asks _configJWT
         mApplyCookies  <- liftIO $ acceptLogin cookieSettings jwtSettings usr
-        maybeOr401 mApplyCookies (\app -> return . app $ LoginSuccess usr)
+        maybeOr401 mApplyCookies (\app -> return . app $ usr)

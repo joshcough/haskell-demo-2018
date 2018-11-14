@@ -12,10 +12,10 @@ import           Servant.Multipart           (FileData(..), MultipartData(..), M
 
 import           Auth.Models                 (User(..))
 import           Config                      (AppT, runDb)
-import           FileServer.DatabaseModels   (DbFileId, DbFile(..))
 import           FileServer.Models           (File(..))
 import qualified FileServer.S3               as S3
 import qualified FileServer.Storage          as Db
+import           FileServer.Storage          (DbFileId, DbFile(..))
 import           Logging                     (logDebug)
 
 type FileServerAPI = "file_server" :> Compose FileServer
@@ -28,18 +28,20 @@ data FileServer route = FileServer {
 
 -- | The server that runs the FileServerAPI
 fileServer :: (MonadIO m) => User -> ServerT FileServerAPI (AppT m)
-fileServer caller = toServant $ FileServer {
-    fileAPIGetFileById = \fid -> withFileAccess fid S3.withS3Paths
-  , fileAPIDeleteFile = \fid -> void . withFileAccess fid $ \dbFile -> do
+fileServer caller = toServant $ FileServer { .. }
+    where
+    -- server functions
+    fileAPIGetFileById fid = withFileAccess fid S3.withS3Paths
+    fileAPIDeleteFile fid = void . withFileAccess fid $ \dbFile -> do
         Db.deleteFile fid
         S3.deleteFile dbFile
-  , fileAPIUploadFile = \multipartData -> do
+    fileAPIUploadFile multipartData = do
         $(logDebug) "uploadFile" []
         forM (files multipartData) $ \fd -> do
              file' <- Db.insertFile (toSqlKey $ userId caller) (fdFileName fd)
              S3.uploadFile $ S3.UploadFile file' (fdPayload fd)
-}
-    where
+
+    -- helper function
     withFileAccess fid m = do
         mf <- runDb . Db.getFile $ fid
         maybeOr404 mf $ \f -> do

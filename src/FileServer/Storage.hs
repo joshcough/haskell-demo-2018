@@ -1,16 +1,27 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module FileServer.Storage (
-    FilesDb(..)
+    DbFile(..)
+  , DbFileId
+  , FilesDb(..)
   ) where
 
-import           Control.Monad.Except        (MonadIO)
-import           Database.Persist.Postgresql (insert)
-import           Data.Text                   (Text)
+import           Control.Monad.Except             (MonadIO)
 import           Database.Esqueleto
+import           Database.Persist.Postgresql      (insert)
+import           Database.Persist.Postgresql.JSON ()
+import           Database.Persist.TH              (mkDeleteCascade, mkPersist, persistLowerCase, share, sqlSettings)
+import           Data.Text                        (Text)
 
-import           Config                      (AppT', runDb)
-import           Auth.DatabaseModels         (DbUserId)
-import           FileServer.DatabaseModels   (DbFile(..), DbFileId)
+import           Config                           (AppT', runDb)
+import           Auth.DatabaseModels              (DbUserId)
+
+share [mkPersist sqlSettings, mkDeleteCascade sqlSettings] [persistLowerCase|
+DbFile json sql=files
+    userId             DbUserId
+    originalFileName   Text sql=original_file_name
+    deriving Show Eq
+|]
 
 class Monad m => FilesDb m where
     insertFile :: DbUserId -> Text -> m (Entity DbFile)

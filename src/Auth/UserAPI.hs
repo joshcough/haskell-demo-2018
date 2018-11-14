@@ -11,7 +11,7 @@ import           Servant.Auth.Server
 
 import           Auth.DatabaseModels         (DbUserId)
 import           Auth.Models                 (CreateUser(..), Login(..), LoginSuccess(..), User(..))
-import qualified Auth.Storage.UserStorage    as Db
+import qualified Auth.UserStorage    as Db
 import           Error                       (FileServerDemoError)
 import           Config                      (AppT, Config(..), runDb)
 import           Logging                     (logDebug, logDebug_)
@@ -70,34 +70,18 @@ data UserServer route = UserServer {
 userServer :: (MonadIO m) => User -> ServerT UserAPI (AppT m)
 userServer caller = toServant $ UserServer { .. }
     where
-    userServerGetUserById = getUserById caller
-    userServerDeleteUser = deleteUser caller
-    userServerCreateUser = createUser caller
-    userServerUpdateUser = updateUser caller
-
--- | Returns a user by name or throws a 404 error.
-getUserById :: MonadIO m => User -> DbUserId -> AppT m User
-getUserById caller uid = do
-    $(logDebug) "getting user" ["uid" .= uid]
-    callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid return
-
--- | Creates a user in the database.
-deleteUser :: MonadIO m => User -> DbUserId -> AppT m ()
-deleteUser caller uid = do
-    $(logDebug) "deleting user" ["uid" .= uid]
-    adminOr401 caller $ withUserOr404 uid (const . runDb $ Db.deleteUserById uid)
-
--- | Creates a user in the database.
-createUser :: MonadIO m => User -> CreateUser -> AppT m DbUserId
-createUser caller c = do
-    $(logDebug_) "creating user"
-    adminOr401 caller $ runDb (Db.createUser c) >>= flip (maybeOr500 "Couldn't create user.") return
-
--- | Update a user in the database.
-updateUser :: MonadIO m => User -> DbUserId -> User -> AppT m ()
-updateUser caller uid u = do
-    $(logDebug) "updating user" ["uid" .= uid, "user" .= u]
-    callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid . const . runDb $ Db.updateUserIfExists uid u
+    userServerGetUserById uid = do
+        $(logDebug) "getting user" ["uid" .= uid]
+        callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid return
+    userServerDeleteUser uid = do
+        $(logDebug) "deleting user" ["uid" .= uid]
+        adminOr401 caller $ withUserOr404 uid (const . runDb $ Db.deleteUserById uid)
+    userServerCreateUser c =  do
+        $(logDebug_) "creating user"
+        adminOr401 caller $ runDb (Db.createUser c) >>= flip (maybeOr500 "Couldn't create user.") return
+    userServerUpdateUser uid u = do
+        $(logDebug) "updating user" ["uid" .= uid, "user" .= u]
+        callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid . const . runDb $ Db.updateUserIfExists uid u
 
 -- | Look up a user by id. If it exist, run an operation on it. If not, throw a 404.
 withUserOr404 :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m) => DbUserId -> (User -> m b) -> m b

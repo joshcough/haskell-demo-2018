@@ -48,16 +48,14 @@ library
       , KeyGen
       , Auth.DatabaseModels
       , Auth.Models
-      , Auth.PSBridge
-      , Auth.Storage.UserStorage
       , Auth.UserAPI
+      , Auth.UserStorage
       , FileServer.DatabaseModels
       , FileServer.FileServerAPI
       , FileServer.Models
       , FileServer.S3
       , FileServer.Storage
       , ServantHelpers
-      , PSBridge
       , Util.Utils
     build-depends:
         base >= 4.9 && < 5.0
@@ -110,43 +108,3 @@ library
     ghc-options:
         -fwarn-unused-imports -Wall -fwarn-unused-binds -fwarn-unused-imports
         -- -ddump-splices
-
-test-suite file-server-demo-test
-    type:
-        exitcode-stdio-1.0
-    hs-source-dirs:
-        test
-    main-is:
-        Spec.hs
-    other-modules:
-        Auth.UserDbSpec
-        Auth.UserServerWaiSpec
-        Helpers
-    build-depends:
-        base
-      , aeson
-      , aeson-pretty
-      , bytestring
-      , hspec
-      , hspec-wai
-      , hspec-wai-json
-      , http-types
-      , mtl
-      , persistent
-      , persistent-postgresql
-      , QuickCheck
-      , servant-auth-server
-      , text
-      , file-server-demo
-      , uuid
-      , wai
-      , wai-extra
-      , warp
-    ghc-options:
-        -threaded -rtsopts -with-rtsopts=-N -fwarn-unused-imports  -Wall -fwarn-unused-binds -fwarn-unused-imports
-    default-language:
-        Haskell2010
-    default-extensions:  OverloadedStrings TypeApplications ScopedTypeVariables AllowAmbiguousTypes NamedFieldPuns
-                         FlexibleContexts TypeFamilies TypeOperators MultiParamTypeClasses FlexibleInstances GADTs
-                         DataKinds ConstraintKinds DeriveGeneric QuasiQuotes RankNTypes TypeSynonymInstances
-                         LambdaCase RecordWildCards DeriveFunctor FunctionalDependencies TemplateHaskell TupleSections

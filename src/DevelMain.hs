@@ -51,6 +51,10 @@ update = do
         withStore doneStore takeMVar
         readStore doneStore >>= start
 
+    modifyStoredIORef :: Store (IORef a) -> (a -> IO a) -> IO ()
+    modifyStoredIORef store f = withStore store $ \ref -> do
+        v <- readIORef ref
+        f v >>= writeIORef ref
 
     -- | Start the server in a separate thread.
     start :: MVar () -- ^ Written to when the thread is killed.
@@ -75,8 +79,3 @@ shutdown = do
 
 tidStoreNum :: Word32
 tidStoreNum = 1
-
-modifyStoredIORef :: Store (IORef a) -> (a -> IO a) -> IO ()
-modifyStoredIORef store f = withStore store $ \ref -> do
-    v <- readIORef ref
-    f v >>= writeIORef ref

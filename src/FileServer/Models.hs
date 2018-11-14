@@ -39,6 +39,4 @@ data MoveRequest = MoveRequest {
   } deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 listFilesRecursive :: Folder file -> [file]
-listFilesRecursive Folder{..} = folderFiles ++ do
-    childFolder <- folderFolders
-    listFilesRecursive childFolder
+listFilesRecursive Folder{..} = folderFiles ++ (listFilesRecursive =<< folderFolders)

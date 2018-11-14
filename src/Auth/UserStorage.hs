@@ -1,5 +1,5 @@
 
-module Auth.Storage.UserStorage (
+module Auth.UserStorage (
     UserDb(..)
   ) where
 
@@ -43,9 +43,8 @@ instance MonadIO m => UserDb (SqlPersistT m) where
 
     deleteUserById = P.deleteCascade
 
-    createUser (CreateUser name email pass) = do
-        mPassword <- liftIO $ encryptPassword pass
-        case mPassword of
+    createUser (CreateUser name email pass) =
+       liftIO (encryptPassword pass) >>= \case
             Nothing -> return Nothing -- TODO: need to throw an error here...
             Just password' -> Just <$> insert (DbUser name email $ decodeUtf8 password')
         where

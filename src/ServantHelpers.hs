@@ -65,4 +65,6 @@ callerIsUserOr401 caller uid m = if userId caller == fromSqlKey uid then m else 
 
 callerIsUserOrIsAdminElse401 :: MonadError FileServerDemoError m => User -> DbUserId -> m a -> m a
 callerIsUserOrIsAdminElse401 caller uid m =
-    if userEmail caller == "joshcough@gmail.com" || userId caller == fromSqlKey uid then m else throwError (AppAuthError NoAuthError)
+    if userEmail caller == "joshcough@gmail.com" || userId caller == fromSqlKey uid
+    then m
+    else throwError (AppAuthError NoAuthError)

@@ -1,5 +1,5 @@
 
-module Util.Utils (
+module Utils (
     tShow
 ) where
 

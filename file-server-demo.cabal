@@ -57,7 +57,7 @@ library
       , FileServer.S3
       , FileServer.Storage
       , ServantHelpers
-      , Util.Utils
+      , Utils
     build-depends:
         base >= 4.9 && < 5.0
       , aeson

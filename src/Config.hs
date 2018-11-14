@@ -33,7 +33,7 @@ import           Web.Rollbar                          (RollbarCfg(..), HasRollba
 
 import           Error
 import           Logging
-import           Util.Utils                           (tShow)
+import           Utils
 
 -- | Right now, we're distinguishing between three environments. We could
 -- also add a @Staging@ environment if we needed to.

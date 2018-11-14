@@ -17,7 +17,7 @@ module Error(
     orFailM
 ) where
 
-import Util.Utils (tShow)
+import Utils (tShow)
 
 import Control.Exception
 import Control.Lens (prism, makeClassyPrisms)

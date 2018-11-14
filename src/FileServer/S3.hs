@@ -19,7 +19,7 @@ import           Config                       (AppT', Config(..), AwsConfig(..))
 import           FileServer.DatabaseModels    (DbFile(..))
 import           FileServer.Models            (File(..))
 import           Logging                      (logDebug)
-import           Util.Utils                   (tShow)
+import           Utils                        (tShow)
 
 
 {-

@@ -4,8 +4,7 @@ module FileServer.S3 (
   , UploadFile(..)
   ) where
 
-import           Control.Lens                 ((&), (.~))
-import           Control.Monad                (unless, void)
+import           Control.Monad                (void)
 import           Control.Monad.IO.Class       (MonadIO, liftIO)
 import           Control.Monad.Reader         (asks)
 import           Control.Monad.Trans.AWS
@@ -14,11 +13,11 @@ import           Data.Aeson                   ((.=))
 import           Data.Monoid                  ((<>))
 import           Data.Text                    (Text)
 import           Database.Esqueleto           (Entity(..), fromSqlKey)
-import           Network.AWS.S3               (ObjectKey(..), BucketName(..), deleteObject, deleteObjects, objectIdentifier, delete', dObjects, putObject)
+import           Network.AWS.S3               (ObjectKey(..), BucketName(..), deleteObject, putObject)
 
 import           Config                       (AppT', Config(..), AwsConfig(..))
 import           FileServer.DatabaseModels    (DbFile(..))
-import           FileServer.Models            (File(..), Folder(..), listFilesRecursive)
+import           FileServer.Models            (File(..))
 import           Logging                      (logDebug)
 import           Util.Utils                   (tShow)
 
@@ -40,7 +39,6 @@ runAppT (configBucket) c
 class Monad m => S3FileServer m where
     uploadFile :: UploadFile -> m File
     deleteFile :: Entity DbFile -> m File
-    deleteFolder :: Folder (Entity DbFile) -> m [File]
     withS3Paths :: Entity DbFile -> m File
 
 instance (MonadIO m) => S3FileServer (AppT' e m) where
@@ -54,15 +52,6 @@ instance (MonadIO m) => S3FileServer (AppT' e m) where
         $(logDebug) "Deleting file in aws" ["fileS3Path" .= fileS3Path]
         withBucket $ \bucket -> deleteObject bucket (ObjectKey fileS3File)
         return f
-
-    deleteFolder f = do
-        f'@Folder{..} <- mapM withS3Paths f
-        let files = listFilesRecursive f'
-        unless (null files) $ do
-            let fileIds = objectIdentifier . ObjectKey . fileS3File <$> files
-            $(logDebug) "Deleting folder in aws " ["folderName" .= folderName, "childFiles" .= files]
-            withBucket $ \bucket -> deleteObjects bucket (delete' & dObjects .~ fileIds)
-        return files
 
     withS3Paths e = do
         s3Bucket <- _awsConfigDemoBucketUrl <$> asks _configAwsEnv
@@ -101,7 +90,6 @@ entityToFile :: Text -> Entity DbFile -> File
 entityToFile s3BucketUrl (Entity k DbFile {..}) = File {
     fileId       = fileId
   , fileUserId   = userId
-  , fileFolderId = fromSqlKey dbFileFolderId
   , fileName     = dbFileOriginalFileName
   , fileS3File   = s3File
   , fileS3Path   = s3BucketUrl <> s3File

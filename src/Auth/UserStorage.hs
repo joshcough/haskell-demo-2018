@@ -4,7 +4,7 @@ module Auth.UserStorage (
   ) where
 
 import           Control.Monad               (forM_)
-import           Control.Monad.Except        (MonadIO, liftIO)
+import           Control.Monad.Except        (MonadIO, liftIO, throwError)
 import           Crypto.BCrypt               (hashPasswordUsingPolicy, slowerBcryptHashingPolicy)
 import           Data.Text                   (Text)
 import           Data.Text.Encoding          (decodeUtf8, encodeUtf8)
@@ -14,7 +14,8 @@ import qualified Database.Persist.Postgresql as P
 import           Auth.DatabaseModels         (DbUser(..), DbUserId)
 import qualified Auth.DatabaseModels         as Db
 import           Auth.Models                 (CreateUser(..), User(..))
-import           Config                      (AppT', runDb)
+import           Config                      (AppT, runDb)
+import           Error                       (AppError(..), FileServerDemoError'(..))
 
 class Monad m => UserDb m where
     getUserById :: DbUserId -> m (Maybe User)
@@ -25,7 +26,7 @@ class Monad m => UserDb m where
     -- TODO: this one is kind of terrible.
     updateUserIfExists :: DbUserId -> User -> m ()
 
-instance MonadIO m => UserDb (AppT' e m) where
+instance (MonadIO m) => UserDb (AppT m) where
     getUserById = runDb . fmap (fmap entityToUser) . getEntity
 
     getUserByUsername username = runDb $ fmap entityToUser <$> selectFirst [Db.DbUserName P.==. username] []
@@ -37,7 +38,7 @@ instance MonadIO m => UserDb (AppT' e m) where
 
     createUser (CreateUser name email pass) =
        liftIO (encryptPassword pass) >>= \case
-            Nothing -> return Nothing -- TODO: need to throw an error here...
+            Nothing -> throwError . AppAppError . DemoMiscError $ "unknown password error"
             Just password' ->  runDb $ Just <$> insert (DbUser name email $ decodeUtf8 password')
         where
         encryptPassword = hashPasswordUsingPolicy slowerBcryptHashingPolicy . encodeUtf8

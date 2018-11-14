@@ -45,25 +45,25 @@ data Environment
 
 -- | The AWS Config for our application
 data AwsConfig = AwsConfig {
-    _awsConfigS3RootUrl            :: Text
+    _awsConfigS3RootUrl :: Text
   , _awsConfigDemoBucketName :: Text
-  , _awsConfigDemoBucketUrl  :: Text
-  , _awsConfigEnv                  :: AWS.Env
+  , _awsConfigDemoBucketUrl :: Text
+  , _awsConfigEnv :: AWS.Env
   }
 makeClassy ''AwsConfig
 
 -- | The Config for our application
 data Config
     = Config
-    { _configPool         :: ConnectionPool
-    , _configEnv          :: Environment
-    , _configPort         :: Port
-    , _configCookies      :: CookieSettings
-    , _configJWT          :: JWTSettings
-    , _configHttp         :: HttpCfg
-    , _configAwsEnv       :: AwsConfig
-    , _configRollbar      :: RollbarCfg
-    , _configLogging      :: LoggingCfg
+    { _configPool :: ConnectionPool
+    , _configEnv :: Environment
+    , _configPort :: Port
+    , _configCookies :: CookieSettings
+    , _configJWT :: JWTSettings
+    , _configHttp :: HttpCfg
+    , _configAwsEnv :: AwsConfig
+    , _configRollbar :: RollbarCfg
+    , _configLogging :: LoggingCfg
     }
 
 makeClassy ''Config

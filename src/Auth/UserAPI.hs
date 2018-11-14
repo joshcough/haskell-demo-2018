@@ -43,7 +43,7 @@ userServer caller = toServant $ UserServer { .. }
         $(logDebug) "updating user" ["uid" .= uid, "user" .= u]
         callerIsUserOrIsAdminElse401 caller uid $ withUserOr404 uid . const $ Db.updateUserIfExists uid u
 
--- | Look up a user by id. If it exist, run an operation on it. If not, throw a 404.
+-- | Look up a user by id. If it exists, run an operation on it. If not, throw a 404.
 withUserOr404 :: (MonadError FileServerDemoError m, MonadIO m, MonadReader Config m, Db.UserDb m) =>
                  DbUserId -> (User -> m b) -> m b
-withUserOr404 uid m = Db.getUserById uid >>= flip maybeOr404 m
+withUserOr404 uid m = flip maybeOr404 m =<< Db.getUserById uid

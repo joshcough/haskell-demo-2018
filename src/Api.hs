@@ -24,9 +24,8 @@ app cfg = serveWithContext
             (mainServer :<|> files)
     where
     convertApp :: Config -> App a -> Handler a
-    convertApp cfg' appt = Handler $ do
-        errOrResult <- liftIO $ runAppT appt cfg'
-        either (throwError . toServantErr) return errOrResult
+    convertApp cfg' appt = Handler $
+        either (throwError . toServantErr) return =<< liftIO (runAppT appt cfg')
 
     mainServer :: Server API
     mainServer = hoistServerWithContext

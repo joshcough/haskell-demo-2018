@@ -47,6 +47,7 @@ library
       , Logging
       , KeyGen
       , Auth.DatabaseModels
+      , Auth.LoginAPI
       , Auth.Models
       , Auth.UserAPI
       , Auth.UserStorage

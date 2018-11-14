@@ -6,8 +6,9 @@ import           Control.Monad.Except     ( MonadIO, liftIO, throwError )
 import           Servant
 import           Servant.Auth.Server      hiding (throwAll)
 
+import           Auth.LoginAPI            ( LoginAPI, loginServer )
 import           Auth.Models              ( User )
-import           Auth.UserAPI             ( LoginAPI, UserAPI, loginServer, userServer )
+import           Auth.UserAPI             ( UserAPI, userServer )
 import           Config                   ( App, AppT, Config (..), runAppT )
 import           Error                    ( AppError(..), AuthError(..), toServantErr, throwAll )
 import           FileServer.FileServerAPI ( FileServerAPI, fileServer )
